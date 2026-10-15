@@ -50,7 +50,7 @@
   function showToast(message, actionLabel = null, actionHandler = null) {
     if (!toast) return;
     toast.innerHTML = "";
-    
+
     const textSpan = document.createElement("span");
     textSpan.textContent = message;
     toast.appendChild(textSpan);
@@ -89,18 +89,54 @@
     });
   });
 
+  // Category Label Mapping
+  const CATEGORY_LABELS = {
+    "Suits": "Suits & Kurti Sets",
+    "Sarees": "Sarees & Lehengas",
+    "Co-ords": "Co-ords & Indo-Western",
+    "Kids": "Kidswear"
+  };
+
   // Product Filtering
   const filterButtons = document.querySelectorAll(".filter");
   const productCards = document.querySelectorAll(".product-card");
 
   function setFilter(filter) {
-    filterButtons.forEach(button => button.classList.toggle("active", button.dataset.filter === filter));
-    productCards.forEach(card => card.classList.toggle("is-hidden", filter !== "All" && card.dataset.category !== filter));
+    let activeFilter = filter;
+    if (filter === "Women" || filter === "Ladieswear") {
+      activeFilter = "All"; // or highlight All
+    }
+
+    filterButtons.forEach(button => {
+      const bFilter = button.dataset.filter;
+      button.classList.toggle("active", bFilter === filter || (filter === "Women" && bFilter === "All"));
+    });
+
+    productCards.forEach(card => {
+      const cat = card.dataset.category;
+      let matches = false;
+      if (filter === "All") {
+        matches = true;
+      } else if (filter === "Women" || filter === "Ladieswear") {
+        matches = cat !== "Kids";
+      } else {
+        matches = cat === filter;
+      }
+      card.classList.toggle("is-hidden", !matches);
+    });
   }
 
   filterButtons.forEach(button => button.addEventListener("click", () => setFilter(button.dataset.filter)));
+
   document.querySelectorAll("[data-filter-link]").forEach(link => {
-    link.addEventListener("click", () => setFilter(link.dataset.filterLink));
+    link.addEventListener("click", (e) => {
+      const targetFilter = link.dataset.filterLink;
+      setFilter(targetFilter);
+      const productsSection = document.getElementById("products");
+      if (productsSection) {
+        productsSection.scrollIntoView({ behavior: "smooth" });
+      }
+    });
   });
 
   // Direct single item order button
@@ -109,8 +145,9 @@
       const card = button.closest(".product-card");
       const productName = card.dataset.name;
       const price = card.dataset.price;
-      const category = card.dataset.category;
-      openWhatsApp(`Hello Kanishka Collection! 🛍️\n\nI'd like to enquire/order this item directly:\n\n• *Product:* ${productName}\n• *Category:* ${category}\n• *Listed Price:* ${price}\n• *Size:* Please share available sizes\n• *Colour:* Please share available colours\n\nPlease confirm availability and final price with delivery in Gonda.`);
+      const rawCategory = card.dataset.category;
+      const categoryName = CATEGORY_LABELS[rawCategory] || rawCategory;
+      openWhatsApp(`Hello Kanishka Collection! 🛍️\n\nI'd like to enquire/order this item directly:\n\n• *Product:* ${productName}\n• *Category:* ${categoryName}\n• *Listed Price:* ${price}\n• *Size:* Please share available sizes\n• *Colour:* Please share available colours\n\nPlease confirm availability and final price with delivery in Gonda.`);
     });
   });
 
@@ -370,7 +407,8 @@
       const card = button.closest(".product-card");
       const name = card.dataset.name;
       const priceText = card.dataset.price;
-      const category = card.dataset.category;
+      const rawCategory = card.dataset.category;
+      const category = CATEGORY_LABELS[rawCategory] || rawCategory;
       const img = card.querySelector(".product-image img");
       const image = img ? img.src : "";
 
@@ -405,7 +443,7 @@
     const customerNotes = customerNotesInput ? customerNotesInput.value.trim() : "";
 
     let message = `Hello Kanishka Collection! 🛍️\nI would like to place an order from your website:\n\n*ORDER DETAILS:*`;
-    
+
     cart.forEach((item, idx) => {
       const lineTotal = formatCurrency(item.numericPrice * item.quantity);
       message += `\n\n${idx + 1}. *${item.name}* (${item.category})`;
